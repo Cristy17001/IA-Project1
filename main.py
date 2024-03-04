@@ -57,7 +57,9 @@ def fitness_function(airplane_stream):
         # Process each plane in the group
         for (_, airplane) in group:
             # Check if the plane has a crash
-            if check_for_crash(airplane, current_time): return -1
+            crash_weight = 0
+            if check_for_crash(airplane, current_time):
+                crash_weight = 100
 
             # Check if the plane has a fuel related incident
             fuel_incident_weight = 0
@@ -70,7 +72,7 @@ def fitness_function(airplane_stream):
             if current_time > airplane.expected_landing_time:
                 expected_landing_time_weight = (current_time - airplane.expected_landing_time) * 0.01
 
-            reverse_fitness_score += fuel_incident_weight + expected_landing_time_weight
+            reverse_fitness_score += fuel_incident_weight + expected_landing_time_weight + crash_weight
 
         # Add 3 minutes to the current time
         current_time += 3
