@@ -1,10 +1,9 @@
 
 import random
+from matplotlib.animation import FuncAnimation
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from IPython.display import clear_output
-from pylive import live_plotter
 
 
 class Airplane:
@@ -158,7 +157,7 @@ def perform_crossover(tournament_winners, i):
     return (parent_1, parent_2, child_1, child_2)
 
 
-def perform_mutation(mutation_rate:int , child):
+def perform_mutation(mutation_rate, child):
     # Mutation
     if random.random() < mutation_rate:
 
@@ -173,8 +172,36 @@ def perform_mutation(mutation_rate:int , child):
         child[mutation_point2] = aux
     return child
 
+def show_fitness_evolution_animation(metrics):
+    x_vec = list(range(1, number_of_generations + 1))
+    y_vec = metrics['mean']
 
-def genetic_algorithm(generation_with_fitness, mutation_rate, crossover_rate):
+    fig, ax = plt.subplots()
+    line, = ax.plot([], [], label='Best Fitness Score Evolution')
+    title = ax.set_title('Average Fitness Score Evolution')
+    ax.set_xlabel('Generation')
+    ax.set_ylabel('Fitness Score')
+
+    # Set the x-axis range
+    ax.set_xlim(0, number_of_generations)
+
+    # Set the y-axis range
+    ax.set_ylim(0, max(y_vec))
+
+    def update(frame):
+        line.set_data(x_vec[:frame], y_vec[:frame])
+        title.set_text(f'Genetic Algorithm\nGeneration: {frame+1} - AvgFitness: {y_vec[frame]:.2f} - BestFitness: {metrics["min"][frame]:.2f}')
+
+        fig.canvas.draw()
+        fig.canvas.flush_events()
+        return line,
+
+    ani = FuncAnimation(fig, update, frames=len(x_vec), interval=0, blit=True, repeat=False)
+    plt.legend()
+    plt.show()
+
+
+def genetic_algorithm(generation_with_fitness, mutation_rate):
     # Tournament selection
     tournament_winners = []
     next_generation = []
@@ -228,37 +255,23 @@ print("Possible solutions:", len(first_generation))
 
 generation_with_fitness = add_fitness_to_generation(first_generation)
 
-# show_solution_with_fitness(solution_with_fitness)
-
-
-generation = genetic_algorithm(generation_with_fitness, 0.01, 0)
+generation = genetic_algorithm(generation_with_fitness, 0.01)
 metrics = {'min' : [], 'max' : [], 'mean' : []}
 number_of_generations = 500
-x_vec = [range(0, number_of_generations)]
-y_vec = []
-line1 = []
 
 for i in range(0, number_of_generations):
     generation_with_fitness = add_fitness_to_generation(generation)
     # show_solution_with_fitness(generation_with_fitness)
     metric = get_metrics_from_generation(generation_with_fitness)
-    generation = genetic_algorithm(generation_with_fitness, 0.01, 0)
+    generation = genetic_algorithm(generation_with_fitness, 0.01)
 
     # Add the metric to the list of metrics
     metrics['min'].append(metric['min'])
     metrics['mean'].append(metric['mean'])
 
-    # Clear the previous plot
-    # clear_output(wait=True)
-
     # Print the metrics
-    # print("Generation", i+1)
-    # print("Best Fitness:", metric['min'])
-    # print("Average Fitness:", metric['mean'])
+    print("Generation", i+1)
+    print("Best Fitness:", metric['min'])
+    print("Average Fitness:", metric['mean'])
 
-    # Plot the average fitness score evolution
-    # plt.title('Average Fitness Score Evolution')
-    # plt.xlabel('Generation')
-    # plt.ylabel('Fitness Score')
-    # plt.plot(metrics['mean'], label='Best Fitness Score Evolution')
-    # plt.show()
+show_fitness_evolution_animation(metrics)
