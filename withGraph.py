@@ -196,7 +196,7 @@ def show_fitness_evolution_animation(metrics):
         fig.canvas.flush_events()
         return line,
 
-    ani = FuncAnimation(fig, update, frames=len(x_vec), interval=0, blit=True, repeat=False)
+    ani = FuncAnimation(fig, update, frames=len(x_vec), interval=5, blit=True, repeat=False)  # Set the interval parameter to a non-zero value
     plt.legend()
     plt.show()
 
