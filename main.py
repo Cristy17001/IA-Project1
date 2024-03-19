@@ -1,10 +1,9 @@
-
 import random
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
-from pylive import live_plotter
+import math
 
 
 class Airplane:
@@ -213,6 +212,7 @@ def genetic_algorithm(generation_with_fitness, mutation_rate, crossover_rate):
         next_generation.append(child_2)
 
     return next_generation
+
 
 
 ## To identify the airplanes, we can use the index of the list

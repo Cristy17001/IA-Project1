@@ -4,6 +4,7 @@ from matplotlib.animation import FuncAnimation
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import math
 
 
 class Airplane:
@@ -172,6 +173,8 @@ def perform_mutation(mutation_rate, child):
         child[mutation_point2] = aux
     return child
 
+number_of_generations = 500
+
 def show_fitness_evolution_animation(metrics):
     x_vec = list(range(1, number_of_generations + 1))
     y_vec = metrics['mean']
@@ -242,36 +245,110 @@ def genetic_algorithm(generation_with_fitness, mutation_rate):
     return next_generation
 
 
-## To identify the airplanes, we can use the index of the list
-airplane_stream = generate_airplane_stream(200)
-
-# Good baseline for the algorithms to start with
-# Sort the airplane_stream by expected landing time
-sorted_airplane_stream = sorted(airplane_stream, key=lambda x: x[1].expected_landing_time)
 
 
-first_generation = generate_possible_solutions(sorted_airplane_stream, 200)
-print("Possible solutions:", len(first_generation))
+def simulated_annealing_with_tracking(initial_solution, temperature, cooling_rate, num_iterations):
+    current_solution = initial_solution
+    current_fitness = fitness_function(current_solution)
+    best_solution = current_solution
+    best_fitness = current_fitness
 
-generation_with_fitness = add_fitness_to_generation(first_generation)
+    all_solutions = [current_solution]
 
-generation = genetic_algorithm(generation_with_fitness, 0.01)
-metrics = {'min' : [], 'max' : [], 'mean' : []}
-number_of_generations = 500
+    for _ in range(num_iterations):
+        # Generate a neighboring solution
+        next_solution = generate_single_solution(current_solution)
 
-for i in range(0, number_of_generations):
-    generation_with_fitness = add_fitness_to_generation(generation)
-    # show_solution_with_fitness(generation_with_fitness)
-    metric = get_metrics_from_generation(generation_with_fitness)
+        # Calculate fitness for the neighboring solution
+        next_fitness = fitness_function(next_solution)
+
+        # Calculate energy difference
+        energy_difference = next_fitness - current_fitness
+
+        # Accept the new solution if it's better or with a certain probability if it's worse
+        if energy_difference < 0 or random.random() < acceptance_probability(energy_difference, temperature):
+            current_solution = next_solution
+            current_fitness = next_fitness
+
+            # Update the best solution if needed
+            if current_fitness < best_fitness:
+                best_solution = current_solution
+                best_fitness = current_fitness
+
+        # Cool down the temperature
+        temperature *= cooling_rate
+
+        all_solutions.append(current_solution)
+
+    return best_solution, best_fitness, all_solutions
+
+def acceptance_probability(energy_difference, temperature):
+    if energy_difference < 0:
+        return 1
+    else:
+        return math.exp(-energy_difference / temperature)
+    
+
+def menu():
+    print("Choose an algorithm:")
+    print("1. Genetic Algorithm")
+    print("2. Simulated Annealing")
+
+    choice = input("Enter your choice (1 or 2): ")
+
+    if choice == "1":
+        run_genetic_algorithm()
+    elif choice == "2":
+        run_simulated_annealing()
+    else:
+        print("Invalid choice. Please enter 1 or 2.")
+        menu()
+
+def run_genetic_algorithm():
+    airplane_stream = generate_airplane_stream(200)
+    sorted_airplane_stream = sorted(airplane_stream, key=lambda x: x[1].expected_landing_time)
+    first_generation = generate_possible_solutions(sorted_airplane_stream, 200)
+    print("Possible solutions:", len(first_generation))
+    generation_with_fitness = add_fitness_to_generation(first_generation)
     generation = genetic_algorithm(generation_with_fitness, 0.01)
+    metrics = {'min': [], 'max': [], 'mean': []}
+    number_of_generations = 100
 
-    # Add the metric to the list of metrics
-    metrics['min'].append(metric['min'])
-    metrics['mean'].append(metric['mean'])
+    for i in range(number_of_generations):
+        generation_with_fitness = add_fitness_to_generation(generation)
+        metric = get_metrics_from_generation(generation_with_fitness)
+        generation = genetic_algorithm(generation_with_fitness, 0.01)
+        metrics['min'].append(metric['min'])
+        metrics['mean'].append(metric['mean'])
 
-    # Print the metrics
-    print("Generation", i+1)
-    print("Best Fitness:", metric['min'])
-    print("Average Fitness:", metric['mean'])
+        print("Generation", i + 1)
+        print("Best Fitness:", metric['min'])
+        print("Average Fitness:", metric['mean'])
 
-show_fitness_evolution_animation(metrics)
+    show_fitness_evolution_animation(metrics)
+
+
+def show_all_solutions(all_solutions):
+    for i, solution in enumerate(all_solutions):
+        print(f"Iteration {i + 1}:")
+        show_solution_airplace_indexes(solution)
+
+def run_simulated_annealing():
+    airplane_stream = generate_airplane_stream(200)
+    sorted_airplane_stream = sorted(airplane_stream, key=lambda x: x[1].expected_landing_time)
+    initial_temperature = 1000
+    cooling_rate = 0.95
+    num_iterations = 10
+    initial_solution = generate_single_solution(sorted_airplane_stream)
+    best_solution, best_fitness, all_solutions = simulated_annealing_with_tracking(initial_solution, initial_temperature, cooling_rate, num_iterations)
+
+
+    # Show iteration number and fitness score
+    print("Iterations and Fitness Scores:")
+    for i, solution in enumerate(all_solutions):
+        fitness_score = fitness_function(solution)
+        print(f"Iteration {i + 1}: Fitness Score: {fitness_score}")
+
+# Call the menu function to start
+menu()
+
