@@ -1,4 +1,5 @@
 
+import math
 import random
 from matplotlib.animation import FuncAnimation
 import numpy as np
@@ -156,7 +157,6 @@ def perform_crossover(tournament_winners, i):
 
     return (parent_1, parent_2, child_1, child_2)
 
-
 def perform_mutation(mutation_rate, child):
     # Mutation
     if random.random() < mutation_rate:
@@ -164,13 +164,20 @@ def perform_mutation(mutation_rate, child):
         mutation_point1 = random.randint(0, len(child) - 1)
         mutation_point2 = random.randint(0, len(child) - 1)
 
-        while mutation_point1 == mutation_point2:
+        # Make sure that the mutation points are different and not in the same group
+        mutation_point1_division = math.ceil((mutation_point1+1) / 3)
+        mutation_point2_division = math.ceil((mutation_point2+1) / 3)
+
+        while mutation_point1 == mutation_point2 or mutation_point1_division == mutation_point2_division:
             mutation_point2 = random.randint(0, len(child) - 1)
+            mutation_point2_division = math.ceil((mutation_point2+1) / 3)
+
 
         aux = child[mutation_point1]
         child[mutation_point1] = child[mutation_point2]
         child[mutation_point2] = aux
     return child
+
 
 def show_fitness_evolution_animation(metrics):
     x_vec = list(range(1, number_of_generations + 1))
