@@ -203,6 +203,19 @@ def show_fitness_evolution_animation(metrics):
     plt.legend()
     plt.show()
 
+def generate_single_solution2(airplane_stream):
+    # Make a copy of the airplane stream
+    new_solution = airplane_stream.copy()
+    
+    # Select two random indexes within the range of the solution
+    idx1, idx2 = random.sample(range(len(new_solution)), 2)
+    
+    # Swap the positions of the airplanes at the selected indexes
+    new_solution[idx1], new_solution[idx2] = new_solution[idx2], new_solution[idx1]
+    
+    return new_solution
+
+
 
 def genetic_algorithm(generation_with_fitness, mutation_rate):
     # Tournament selection
@@ -257,7 +270,7 @@ def simulated_annealing_with_tracking(initial_solution, temperature, cooling_rat
 
     for _ in range(num_iterations):
         # Generate a neighboring solution
-        next_solution = generate_single_solution(current_solution)
+        next_solution = generate_single_solution2(current_solution)
 
         # Calculate fitness for the neighboring solution
         next_fitness = fitness_function(next_solution)
@@ -312,7 +325,7 @@ def run_genetic_algorithm():
     generation_with_fitness = add_fitness_to_generation(first_generation)
     generation = genetic_algorithm(generation_with_fitness, 0.01)
     metrics = {'min': [], 'max': [], 'mean': []}
-    number_of_generations = 100
+    number_of_generations = 1000
 
     for i in range(number_of_generations):
         generation_with_fitness = add_fitness_to_generation(generation)
@@ -337,8 +350,8 @@ def run_simulated_annealing():
     airplane_stream = generate_airplane_stream(200)
     sorted_airplane_stream = sorted(airplane_stream, key=lambda x: x[1].expected_landing_time)
     initial_temperature = 1000
-    cooling_rate = 0.95
-    num_iterations = 10
+    cooling_rate = 0.60
+    num_iterations = 5000
     initial_solution = generate_single_solution(sorted_airplane_stream)
     best_solution, best_fitness, all_solutions = simulated_annealing_with_tracking(initial_solution, initial_temperature, cooling_rate, num_iterations)
 
