@@ -341,9 +341,17 @@ def run_simulated_annealing(airplane_stream):
 
     # Show iteration number and fitness score
     print("Iterations and Fitness Scores:")
+    iterations = []
+    fitness_scores = []
+    solutions = []
     for i, solution in enumerate(all_solutions):
         fitness_score = fitness_function(solution)
+        iterations.append(i)
+        fitness_scores.append(fitness_score)
+        solutions.append([i for i, _ in solution])
+        show_solution_airplace_indexes(solution)
         print(f"Iteration {i + 1}: Fitness Score: {fitness_score}")
+    report_data['simulated_annealing'] = {'iterations': iterations, 'fitness_scores': fitness_scores, 'solutions': solutions}
 
 # Call the menu function to start
 menu()
