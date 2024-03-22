@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
+
+* {
+    font-family: 'Poppins', sans-serif !important;
+    margin: 0 !important;
+}
+
+body {
+    background-color: #F5F5F5 !important;
+}
+
+.title-wrapper {
+    width: 100% !important;
+    background-color: white;
+    padding: 1rem !important;
+    text-align: center !important;
+}
+
+.title {
+    font-size: 40px !important;
+    font-weight: bold !important;
+    color: #56545D !important;
+}
+
+.select-table {
+    width: 93% !important;
+    margin-inline: auto !important;
+    margin-block: 2rem !important;
+}
+
+.select-table .dash-dropdown {
+    width: 30% !important;
+    min-width: fit-content !important;
+    border-radius: 5px !important;
+    font-size: 16px !important;
+    color: #333 !important;
+    cursor: pointer !important;
+    margin-bottom: 1rem !important;
+}
+
+.row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 1rem !important;
+}
+
+.select-table table {
+    margin-inline: auto !important;
+    border-collapse: collapse !important;
+    border: 1px solid #ddd !important;
+    overflow-x: auto !important;
+}
+
+table th,
+table td {
+    text-align: center !important;
+    border-top: 1px solid #ddd !important;
+    border-bottom: 1px solid #ddd !important;
+    text-overflow: ellipsis !important;
+    overflow-x: hidden !important;
+    white-space: nowrap !important;
+    padding: 0.5rem !important;
+    max-width: 150px !important;
+}
+
+
+table th {
+    font-size: 1.5rem !important;
+    background-color: #36304A !important;
+    color: white !important;
+}
+
+table td {
+    font-size: 1.25rem !important;
+}
+
+.airplane_stream_title {
+    text-align: center !important;
+    margin-top: 2rem !important;
+    font-size: 30px !important;
+    font-weight: bold !important;
+    color: #56545D !important;
+}
+
+.initial_airplane_stream {
+    width: 93% !important;
+    margin-inline: auto !important;
+    margin-block: 2rem !important;
+}

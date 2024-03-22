@@ -1,9 +1,11 @@
 
 import random
+from matplotlib.animation import FuncAnimation
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from IPython.display import clear_output
+import json
+import math
 
 
 class Airplane:
@@ -15,17 +17,22 @@ class Airplane:
         # Randomly generate expected landing time between 10 and 120 minutes from now
         self.expected_landing_time = random.uniform(10, 120)
 
+report_data = {'genetic': {}, 'simulated_annealing': {}, 'first_airplane_stream': {}}
 
 def generate_airplane_stream(num_airplanes):
     airplane_stream = [(index, Airplane()) for index in range(num_airplanes)]
-    return airplane_stream
+    for index, airplane in airplane_stream:
+        report_data['first_airplane_stream']['index'] = [index for index, _ in airplane_stream]
+        report_data['first_airplane_stream']['arriving_fuel_level'] = [airplane.arriving_fuel_level for _, airplane in airplane_stream]
+        report_data['first_airplane_stream']['fuel_consumption_rate'] = [airplane.fuel_consumption_rate for _, airplane in airplane_stream]
+        report_data['first_airplane_stream']['expected_landing_time'] = [airplane.expected_landing_time for _, airplane in airplane_stream]
 
+    return airplane_stream
 
 def generate_single_solution(airplane_stream):
     shuffled_airplane_stream = airplane_stream.copy()
     random.shuffle(shuffled_airplane_stream)
     return shuffled_airplane_stream
-
 
 ## Generate n_solutions possible solutions
 def generate_possible_solutions(sorted_airplane_stream, size_of_generation):
@@ -112,10 +119,12 @@ def add_fitness_to_generation(generation):
 
 def get_metrics_from_generation(generation):
     fitness_scores = [fitness for _, fitness in generation]
+    min_solution = [solution for solution, fitness in generation if fitness == min(fitness_scores)]
+    airplane_indexes = [index for index, airplane in min_solution[0]]
     return {
-        'max': max(fitness_scores),
         'min': min(fitness_scores),
-        'mean': sum(fitness_scores) / len(fitness_scores)
+        'mean': sum(fitness_scores) / len(fitness_scores),
+        'min_solution': airplane_indexes
     }
 
 
@@ -144,20 +153,11 @@ def perform_crossover(tournament_winners, i):
     parent_2 = tournament_winners[i + 1][0]
     child_1 = parent_1[:crossover_point] + parent_2[crossover_point:]
     child_2 = parent_2[:crossover_point] + parent_1[crossover_point:]
-    # print("Crossover point:", crossover_point)
-    # print("Parent 1: ")
-    # show_solution_airplace_indexes(parent_1)
-    # print("Parent 2: ")
-    # show_solution_airplace_indexes(parent_2)
-    # print("Child 1: ")
-    # show_solution_airplace_indexes(child_1)
-    # print("Child 2: ")
-    # show_solution_airplace_indexes(child_2)
 
     return (parent_1, parent_2, child_1, child_2)
 
 
-def perform_mutation(mutation_rate:int , child):
+def perform_mutation(mutation_rate, child):
     # Mutation
     if random.random() < mutation_rate:
 
@@ -172,8 +172,19 @@ def perform_mutation(mutation_rate:int , child):
         child[mutation_point2] = aux
     return child
 
+def generate_single_solution2(airplane_stream):
+    # Make a copy of the airplane stream
+    new_solution = airplane_stream.copy()
 
-def genetic_algorithm(generation_with_fitness, mutation_rate, crossover_rate):
+    # Select two random indexes within the range of the solution
+    idx1, idx2 = random.sample(range(len(new_solution)), 2)
+
+    # Swap the positions of the airplanes at the selected indexes
+    new_solution[idx1], new_solution[idx2] = new_solution[idx2], new_solution[idx1]
+
+    return new_solution
+
+def genetic_algorithm(generation_with_fitness, mutation_rate):
     # Tournament selection
     tournament_winners = []
     next_generation = []
@@ -214,50 +225,170 @@ def genetic_algorithm(generation_with_fitness, mutation_rate, crossover_rate):
     return next_generation
 
 
-## To identify the airplanes, we can use the index of the list
-airplane_stream = generate_airplane_stream(200)
+def simulated_annealing_with_tracking(initial_solution, temperature, cooling_rate, num_iterations):
+    current_solution = initial_solution
+    current_fitness = fitness_function(current_solution)
+    best_solution = current_solution
+    best_fitness = current_fitness
 
-# Good baseline for the algorithms to start with
-# Sort the airplane_stream by expected landing time
-sorted_airplane_stream = sorted(airplane_stream, key=lambda x: x[1].expected_landing_time)
+    all_solutions = [current_solution]
+
+    for _ in range(num_iterations):
+        # Generate a neighboring solution
+        next_solution = generate_single_solution2(current_solution)
+
+        # Calculate fitness for the neighboring solution
+        next_fitness = fitness_function(next_solution)
+
+        # Calculate energy difference
+        energy_difference = next_fitness - current_fitness
+
+        # Accept the new solution if it's better or with a certain probability if it's worse
+        if energy_difference < 0 or random.random() < acceptance_probability(energy_difference, temperature):
+            current_solution = next_solution
+            current_fitness = next_fitness
+
+            # Update the best solution if needed
+            if current_fitness < best_fitness:
+                best_solution = current_solution
+                best_fitness = current_fitness
 
 
-first_generation = generate_possible_solutions(sorted_airplane_stream, 200)
-print("Possible solutions:", len(first_generation))
+        # Cool down the temperature
+        temperature *= cooling_rate
 
-generation_with_fitness = add_fitness_to_generation(first_generation)
+        all_solutions.append(current_solution)
 
-# show_solution_with_fitness(solution_with_fitness)
+    return best_solution, best_fitness, all_solutions
+
+def acceptance_probability(energy_difference, temperature):
+    if energy_difference < 0:
+        return 1
+    else:
+        if temperature == 0:
+            return 0
+        return math.exp(-energy_difference / temperature)
+
+def generate_report(report_data):
+    # Convert the report data to JSON format
+    report_json = json.dumps(report_data)
+
+    # Specify the file path to save the report
+    file_path = "report.json"
+
+    # Write the report data to the file
+    with open(file_path, "w") as file:
+        file.write(report_json)
+
+    print("Report generated and saved to", file_path)
+
+def menu():
+    print("Choose an algorithm:")
+    print("1. Genetic Algorithm")
+    print("2. Simulated Annealing")
+    print("3. Full Report")
+
+    choice = input("Enter your choice (1 or 2 or 3): ")
+    airplane_stream = generate_airplane_stream(200)
+
+    if choice == "1":
+        number_of_generations, mutation_rate = ask_genetic_algorithm_parameters()
+        run_genetic_algorithm(airplane_stream, number_of_generations, mutation_rate)
+        generate_report(report_data)
+    elif choice == "2":
+        num_iterations, initial_temperature, cooling_rate = ask_simulated_annealing_parameters()
+        run_simulated_annealing(airplane_stream, num_iterations, initial_temperature, cooling_rate)
+        generate_report(report_data)
+    elif choice == "3":
+        number_of_generations, mutation_rate = ask_genetic_algorithm_parameters()
+        num_iterations, initial_temperature, cooling_rate = ask_simulated_annealing_parameters()
+
+        run_genetic_algorithm(airplane_stream, number_of_generations, mutation_rate)
+        run_simulated_annealing(airplane_stream, num_iterations, initial_temperature, cooling_rate)
+        generate_report(report_data)
+    else:
+        print("Invalid choice. Please enter 1 or 2.")
+        menu()
+
+def ask_genetic_algorithm_parameters():
+    print("====================================")
+    print("\tGenetic Algorithm:")
+    print("====================================")
+    number_of_generations = int(input("Enter the number of generations: "))
+    mutation_rate = float(input("Enter the mutation rate (between 0 and 1): "))
+
+    return number_of_generations, mutation_rate
+
+def ask_simulated_annealing_parameters():
+    print("====================================")
+    print("\tSimulated annealing:")
+    print("====================================")
+    num_iterations = int(input("Enter the number of iterations: "))
+    initial_temperature = float(input("Enter the initial temperature: "))
+    cooling_rate = float(input("Enter the cooling rate (between 0 and 1): "))
+
+    return num_iterations, initial_temperature, cooling_rate
 
 
-generation = genetic_algorithm(generation_with_fitness, 0.01, 0)
-metrics = {'min' : [], 'max' : [], 'mean' : []}
-number_of_generations = 500
-x_vec = [range(0, number_of_generations)]
-y_vec = []
-line1 = []
+def run_genetic_algorithm(airplane_stream, number_of_generations, mutation_rate):
+    sorted_airplane_stream = sorted(airplane_stream, key=lambda x: x[1].expected_landing_time)
+    print("====================================")
+    print("    Running Genetic Algorithm:")
+    print("====================================")
+    first_generation = generate_possible_solutions(sorted_airplane_stream, 200)
+    generation_with_fitness = add_fitness_to_generation(first_generation)
 
-for i in range(0, number_of_generations):
-    generation_with_fitness = add_fitness_to_generation(generation)
-    # show_solution_with_fitness(generation_with_fitness)
-    metric = get_metrics_from_generation(generation_with_fitness)
-    generation = genetic_algorithm(generation_with_fitness, 0.01, 0)
+    generation = genetic_algorithm(generation_with_fitness, mutation_rate)
+    metrics = {'min': [], 'mean': [], 'min_solution': []}
 
-    # Add the metric to the list of metrics
-    metrics['min'].append(metric['min'])
-    metrics['mean'].append(metric['mean'])
+    # Validate the mutation rate
+    if mutation_rate < 0 or mutation_rate > 1:
+        print("Invalid mutation rate. Please enter a value between 0 and 1.")
+        menu()
 
-    # Clear the previous plot
-    # clear_output(wait=True)
+    for i in range(number_of_generations):
+        generation_with_fitness = add_fitness_to_generation(generation)
+        metric = get_metrics_from_generation(generation_with_fitness)
+        generation = genetic_algorithm(generation_with_fitness, mutation_rate)
+        metrics['min'].append(metric['min'])
+        metrics['mean'].append(metric['mean'])
+        metrics['min_solution'].append(metric['min_solution'])
 
-    # Print the metrics
-    # print("Generation", i+1)
-    # print("Best Fitness:", metric['min'])
-    # print("Average Fitness:", metric['mean'])
+        print("Generation", i + 1)
+        print("Best Fitness:", metric['min'])
+        # print("Best Solution:", metric['min_solution'])
+        print("Average Fitness:", metric['mean'])
 
-    # Plot the average fitness score evolution
-    # plt.title('Average Fitness Score Evolution')
-    # plt.xlabel('Generation')
-    # plt.ylabel('Fitness Score')
-    # plt.plot(metrics['mean'], label='Best Fitness Score Evolution')
-    # plt.show()
+    report_data['genetic'] = metrics
+
+
+def show_all_solutions(all_solutions):
+    for i, solution in enumerate(all_solutions):
+        print(f"Iteration {i + 1}:")
+        show_solution_airplace_indexes(solution)
+
+def run_simulated_annealing(airplane_stream, num_iterations, initial_temperature, cooling_rate):
+    sorted_airplane_stream = sorted(airplane_stream, key=lambda x: x[1].expected_landing_time)
+    initial_solution = generate_single_solution(sorted_airplane_stream)
+    print("====================================")
+    print("    Running Simulated annealing:")
+    print("====================================")
+    best_solution, best_fitness, all_solutions = simulated_annealing_with_tracking(initial_solution, initial_temperature, cooling_rate, num_iterations)
+
+    # Show iteration number and fitness score
+    print("Iterations and Fitness Scores:")
+    iterations = []
+    fitness_scores = []
+    solutions = []
+    for i, solution in enumerate(all_solutions):
+        fitness_score = fitness_function(solution)
+        iterations.append(i)
+        fitness_scores.append(fitness_score)
+        solutions.append([i for i, _ in solution])
+        # show_solution_airplace_indexes(solution)
+        print(f"Iteration {i + 1}: Best Fitness Score: {fitness_score}")
+    report_data['simulated_annealing'] = {'iterations': iterations, 'fitness_scores': fitness_scores, 'solutions': solutions}
+
+# Call the menu function to start
+if __name__ == "__main__":
+    menu()
