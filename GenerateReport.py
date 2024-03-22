@@ -1,9 +1,10 @@
+# Import packages
+from dash import Dash, html, dash_table, dcc, callback, Output, Input
+import pandas as pd
+import plotly.express as px
+import json
+
 def generate_report():
-    # Import packages
-    from dash import Dash, html, dash_table, dcc, callback, Output, Input
-    import pandas as pd
-    import plotly.express as px
-    import json
 
     # Read the JSON file
     with open('report.json', 'r') as file:
