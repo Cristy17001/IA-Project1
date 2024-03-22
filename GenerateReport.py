@@ -10,20 +10,22 @@ def generate_report():
         data = json.load(file)
 
     df_genetic = pd.DataFrame.from_dict(data['genetic'])
-    df_genetic = df_genetic.round(2)
-    df_genetic['min_solution'] = df_genetic['min_solution'].apply(lambda x: str(x))
-    df_genetic = df_genetic.reset_index()
-    df_genetic.rename(columns={'index': 'Generation', 'mean': 'Mean Fitness', 'min': 'Best Fitness', 'min_solution': 'Best Solution'}, inplace=True)
+    if not(df_genetic.empty):
+        df_genetic = df_genetic.round(2)
+        df_genetic['min_solution'] = df_genetic['min_solution'].apply(lambda x: str(x))
+        df_genetic = df_genetic.reset_index()
+        df_genetic.rename(columns={'index': 'Generation', 'mean': 'Mean Fitness', 'min': 'Best Fitness', 'min_solution': 'Best Solution'}, inplace=True)
 
     df_simulated_annealing = pd.DataFrame.from_dict(data['simulated_annealing'])
-    df_simulated_annealing = df_simulated_annealing.round(2)
-    df_simulated_annealing['solutions'] = df_simulated_annealing['solutions'].apply(lambda x: str(x))
-    df_simulated_annealing = df_simulated_annealing.reset_index()
-    df_simulated_annealing.rename(columns={'index': 'Iteration', 'fitness_scores': 'Best Fitness', 'solutions': 'Solution'}, inplace=True)
+    if not(df_simulated_annealing.empty):
+        df_simulated_annealing = df_simulated_annealing.round(2)
+        df_simulated_annealing['solutions'] = df_simulated_annealing['solutions'].apply(lambda x: str(x))
+        df_simulated_annealing.rename(columns={'iterations': 'Iteration', 'fitness_scores': 'Best Fitness', 'solutions': 'Solution'}, inplace=True)
 
     df_first_airplane_stream = pd.DataFrame.from_dict(data['first_airplane_stream'])
-    df_first_airplane_stream = df_first_airplane_stream.round(2)
-    df_first_airplane_stream.rename(columns={'arriving_fuel_level': 'Arriving Fuel Level', 'fuel_consumption_rate': 'Fuel Consumption Rate', 'expected_landing_time': 'Expected Landing Time'}, inplace=True)
+    if not(df_first_airplane_stream.empty):
+        df_first_airplane_stream = df_first_airplane_stream.round(2)
+        df_first_airplane_stream.rename(columns={'arriving_fuel_level': 'Arriving Fuel Level', 'fuel_consumption_rate': 'Fuel Consumption Rate', 'expected_landing_time': 'Expected Landing Time'}, inplace=True)
 
     # Initialize the app - incorporate css
     external_stylesheets = ['style.css']
@@ -73,28 +75,39 @@ def generate_report():
     )
     def update_graph(option_chosen):
         if option_chosen == 'genetic':
-            table = dash_table.DataTable(data=df_genetic.to_dict('records'), page_size=15)
-            fig1 = px.line(df_genetic, x='Generation', y='Mean Fitness', template='plotly_white')
-            fig1.update_layout(
-                title="Mean Fitness over Generations",
-                xaxis_title="Generation",
-                yaxis_title="Mean Fitness"
-            )
-            fig2 = px.line(df_genetic, x='Generation', y='Best Fitness', template='plotly_white')
-            fig2.update_layout(
-                title="Minimum Fitness over Generations",
-                xaxis_title="Generation",
-                yaxis_title="Minimum Fitness"
-            )
+            if not(df_genetic.empty):
+                table = dash_table.DataTable(data=df_genetic.to_dict('records'), page_size=15)
+                fig1 = px.line(df_genetic, x='Generation', y='Mean Fitness', template='plotly_white')
+                fig1.update_layout(
+                    title="Mean Fitness over Generations",
+                    xaxis_title="Generation",
+                    yaxis_title="Mean Fitness"
+                )
+                fig2 = px.line(df_genetic, x='Generation', y='Best Fitness', template='plotly_white')
+                fig2.update_layout(
+                    title="Minimum Fitness over Generations",
+                    xaxis_title="Generation",
+                    yaxis_title="Minimum Fitness"
+                )
+            else:
+                fig1 = px.line([], x=[0], y=[0], template='plotly_white', title='No data available for this algorithm')
+                fig2 = px.line([], x=[0], y=[0], template='plotly_white', title='No data available for this algorithm')
+                table = None
+
         elif option_chosen == 'simulated_annealing':
-            table = dash_table.DataTable(data=df_simulated_annealing.to_dict('records'), page_size=15)
-            fig1 = px.line(df_simulated_annealing, x='Iteration', y='Best Fitness', template='plotly_white')
-            fig1.update_layout(
-                title="Fitness over Iterations",
-                xaxis_title="Iteration",
-                yaxis_title="Mean Fitness"
-            )
-            fig2 = px.line(df_genetic, x=[0], y=[0], template='plotly_white', title='No data available for this algorithm')
+            if not(df_simulated_annealing.empty):
+                table = dash_table.DataTable(data=df_simulated_annealing.to_dict('records'), page_size=15)
+                fig1 = px.line(df_simulated_annealing, x='Iteration', y='Best Fitness', template='plotly_white')
+                fig1.update_layout(
+                    title="Fitness over Iterations",
+                    xaxis_title="Iteration",
+                    yaxis_title="Mean Fitness"
+                )
+                fig2 = px.line([], x=[0], y=[0], template='plotly_white', title='No data available for this algorithm')
+            else:
+                fig1 = px.line([], x=[0], y=[0], template='plotly_white', title='No data available for this algorithm')
+                fig2 = px.line([], x=[0], y=[0], template='plotly_white', title='No data available for this algorithm')
+                table = None
 
 
         return fig1, fig2, table
