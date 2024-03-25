@@ -299,10 +299,6 @@ def hill_climbing(initial_solution, max_iterations):
                 best_solution = current_solution
                 best_fitness = current_fitness
 
-        # Break early if we reach the target fitness score
-        if best_fitness <= 200:
-            break
-
     return best_solution, best_fitness
 
 
