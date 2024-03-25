@@ -1,7 +1,7 @@
 import random
 import json
 import math
-
+import time
 
 class Airplane:
     def __init__(self):
@@ -12,7 +12,7 @@ class Airplane:
         # Randomly generate expected landing time between 10 and 120 minutes from now
         self.expected_landing_time = random.uniform(10, 120)
 
-report_data = {'genetic': {}, 'simulated_annealing': {}, 'first_airplane_stream': {}}
+report_data = {'genetic': {}, 'simulated_annealing': {'iterations':[], 'solutions':[], 'fitness_scores': [], 'time':[], 'temperatures': []}, 'hill_climbing': {'iterations':[], 'solutions':[], 'fitness_scores': [], 'time':[]},'first_airplane_stream': {}}
 
 def generate_airplane_stream(num_airplanes):
     airplane_stream = [(index, Airplane()) for index in range(num_airplanes)]
@@ -38,7 +38,6 @@ def generate_possible_solutions(sorted_airplane_stream, size_of_generation):
         solutions.append(generate_single_solution(sorted_airplane_stream))
 
     return solutions
-
 
 def check_fuel_related_incident(airplane, current_time):
     consumed_fuel = airplane.fuel_consumption_rate * current_time
@@ -225,10 +224,12 @@ def simulated_annealing_with_tracking(initial_solution, temperature, cooling_rat
     current_fitness = fitness_function(current_solution)
     best_solution = current_solution
     best_fitness = current_fitness
+    report_data['simulated_annealing'] = {'iterations':[0], 'solutions':[[a for a, _ in current_solution]], 'fitness_scores': [current_fitness], 'time':[0], 'temperatures': [temperature]}
+    start_time = time.time()
 
     all_solutions = [current_solution]
 
-    for _ in range(num_iterations):
+    for i in range(1, num_iterations+1):
         # Generate a neighboring solution
         next_solution = generate_single_solution2(current_solution)
 
@@ -239,7 +240,9 @@ def simulated_annealing_with_tracking(initial_solution, temperature, cooling_rat
         energy_difference = next_fitness - current_fitness
 
         # Accept the new solution if it's better or with a certain probability if it's worse
-        if energy_difference < 0 or random.random() < acceptance_probability(energy_difference, temperature):
+        acceptWorse = random.random() < acceptance_probability(energy_difference, temperature)
+        # print(acceptWorse)
+        if energy_difference < 0 or acceptWorse:
             current_solution = next_solution
             current_fitness = next_fitness
 
@@ -248,11 +251,15 @@ def simulated_annealing_with_tracking(initial_solution, temperature, cooling_rat
                 best_solution = current_solution
                 best_fitness = current_fitness
 
-
         # Cool down the temperature
         temperature *= cooling_rate
 
         all_solutions.append(current_solution)
+        report_data['simulated_annealing']['iterations'].append(i)
+        report_data['simulated_annealing']['fitness_scores'].append(current_fitness)
+        report_data['simulated_annealing']['solutions'].append([a for a, _ in current_solution])
+        report_data['simulated_annealing']['temperatures'].append(temperature)
+        report_data['simulated_annealing']['time'].append(time.time()-start_time)
 
     return best_solution, best_fitness, all_solutions
 
@@ -263,7 +270,7 @@ def acceptance_probability(energy_difference, temperature):
         if temperature == 0:
             return 0
         return math.exp(-energy_difference / temperature)
-    
+
 
 def generate_neighbor(solution):
     # Generate a neighboring solution by randomly swapping pairs of airplanes
@@ -271,40 +278,6 @@ def generate_neighbor(solution):
     idx1, idx2 = random.sample(range(len(neighbor)), 2)
     neighbor[idx1], neighbor[idx2] = neighbor[idx2], neighbor[idx1]
     return neighbor
-
-def hill_climbing(initial_solution, max_iterations):
-    current_solution = initial_solution
-    current_fitness = fitness_function(current_solution)
-    best_solution = current_solution
-    best_fitness = current_fitness
-
-    for _ in range(max_iterations):
-        # Generate multiple neighboring solutions
-        neighbors = [generate_neighbor(current_solution) for _ in range(5)]
-
-        # Evaluate fitness for each neighbor
-        neighbor_fitnesses = [fitness_function(neighbor) for neighbor in neighbors]
-
-        # Select the best neighbor
-        best_neighbor_index = min(range(len(neighbor_fitnesses)), key=neighbor_fitnesses.__getitem__)
-        neighbor_fitness = neighbor_fitnesses[best_neighbor_index]
-
-        # If the neighbor has better fitness, move to that solution
-        if neighbor_fitness < current_fitness:
-            current_solution = neighbors[best_neighbor_index]
-            current_fitness = neighbor_fitness
-
-            # Update the best solution if needed
-            if current_fitness < best_fitness:
-                best_solution = current_solution
-                best_fitness = current_fitness
-
-        # Break early if we reach the target fitness score
-        if best_fitness <= 200:
-            break
-
-    return best_solution, best_fitness
-
 
 def generate_report(report_data):
     # Convert the report data to JSON format
@@ -338,17 +311,17 @@ def menu():
         run_simulated_annealing(airplane_stream, num_iterations, initial_temperature, cooling_rate)
         generate_report(report_data)
     elif choice == "3":
-        max_iterations = ask_hill_climbing_parameters()
-        run_hill_climbing(airplane_stream, max_iterations)
+        max_iterations, num_neighbors = ask_hill_climbing_parameters()
+        run_hill_climbing(airplane_stream, max_iterations, num_neighbors)
         generate_report(report_data)
     elif choice == "4":
         number_of_generations, mutation_rate = ask_genetic_algorithm_parameters()
         num_iterations, initial_temperature, cooling_rate = ask_simulated_annealing_parameters()
-        max_iterations = ask_hill_climbing_parameters()
+        max_iterations, num_neighbors = ask_hill_climbing_parameters()
 
         run_genetic_algorithm(airplane_stream, number_of_generations, mutation_rate)
         run_simulated_annealing(airplane_stream, num_iterations, initial_temperature, cooling_rate)
-        run_hill_climbing(airplane_stream, max_iterations)
+        run_hill_climbing(airplane_stream, max_iterations, num_neighbors)
         generate_report(report_data)
     else:
         print("Invalid choice. Please enter 1 or 2.")
@@ -375,44 +348,40 @@ def ask_simulated_annealing_parameters():
 
 def ask_hill_climbing_parameters():
     print("====================================")
-    print("\tHill Climbing:")
+    print("   \tHill Climbing:")
     print("====================================")
     max_iterations = int(input("Enter the maximum number of iterations for Hill Climbing: "))
+    num_neighbors = int(input("Enter the number of neighbors to generate in each iteration (1 for Standard): "))
 
-    return max_iterations
-
+    return max_iterations, num_neighbors
 
 def run_genetic_algorithm(airplane_stream, number_of_generations, mutation_rate):
-    sorted_airplane_stream = sorted(airplane_stream, key=lambda x: x[1].expected_landing_time)
+    start_time = time.time()
     print("====================================")
     print("    Running Genetic Algorithm:")
     print("====================================")
-    first_generation = generate_possible_solutions(sorted_airplane_stream, 200)
-    generation_with_fitness = add_fitness_to_generation(first_generation)
-
-    generation = genetic_algorithm(generation_with_fitness, mutation_rate)
-    metrics = {'min': [], 'mean': [], 'min_solution': []}
+    # First generation
+    generation = generate_possible_solutions(airplane_stream, 200)
+    metrics = {'min': [], 'mean': [], 'min_solution': [], 'time': []}
 
     # Validate the mutation rate
     if mutation_rate < 0 or mutation_rate > 1:
         print("Invalid mutation rate. Please enter a value between 0 and 1.")
         menu()
 
-    for i in range(number_of_generations):
+    for i in range(0, number_of_generations):
         generation_with_fitness = add_fitness_to_generation(generation)
         metric = get_metrics_from_generation(generation_with_fitness)
         generation = genetic_algorithm(generation_with_fitness, mutation_rate)
         metrics['min'].append(metric['min'])
         metrics['mean'].append(metric['mean'])
         metrics['min_solution'].append(metric['min_solution'])
-
-        print("Generation", i + 1)
-        print("Best Fitness:", metric['min'])
-        # print("Best Solution:", metric['min_solution'])
-        print("Average Fitness:", metric['mean'])
+        metrics['time'].append(time.time() - start_time)
 
     report_data['genetic'] = metrics
-
+    print("Best Solution:", [i for i in metrics['min_solution'][-1]])
+    print("Best Fitness Score:", metrics['min'][-1])
+    print("Time taken:", time.time()-start_time)
 
 def show_all_solutions(all_solutions):
     for i, solution in enumerate(all_solutions):
@@ -420,51 +389,53 @@ def show_all_solutions(all_solutions):
         show_solution_airplace_indexes(solution)
 
 def run_simulated_annealing(airplane_stream, num_iterations, initial_temperature, cooling_rate):
-    sorted_airplane_stream = sorted(airplane_stream, key=lambda x: x[1].expected_landing_time)
-    initial_solution = generate_single_solution(sorted_airplane_stream)
+    initial_solution = airplane_stream
     print("====================================")
     print("    Running Simulated annealing:")
     print("====================================")
+    start_time = time.time()
     best_solution, best_fitness, all_solutions = simulated_annealing_with_tracking(initial_solution, initial_temperature, cooling_rate, num_iterations)
-
-    # Show iteration number and fitness score
-    print("Iterations and Fitness Scores:")
-    iterations = []
-    fitness_scores = []
-    solutions = []
-    for i, solution in enumerate(all_solutions):
-        fitness_score = fitness_function(solution)
-        iterations.append(i)
-        fitness_scores.append(fitness_score)
-        solutions.append([i for i, _ in solution])
-        # show_solution_airplace_indexes(solution)
-        print(f"Iteration {i + 1}: Best Fitness Score: {fitness_score}")
-    report_data['simulated_annealing'] = {'iterations': iterations, 'fitness_scores': fitness_scores, 'solutions': solutions}
+    print("Best Solution:", [i for i, _ in best_solution])
+    print("Best Fitness Score:", best_fitness)
+    print("Time taken:", time.time()-start_time)
 
 
-def run_hill_climbing(airplane_stream, max_iterations):
-    sorted_airplane_stream = sorted(airplane_stream, key=lambda x: x[1].expected_landing_time)
-    initial_solution = generate_single_solution(sorted_airplane_stream)
+def run_hill_climbing(airplane_stream, max_iterations, num_neighbors):
+    initial_solution = airplane_stream
     print("====================================")
-    print("    Running Hill Climbing:")
+    print("       Running Hill Climbing:")
     print("====================================")
+    start_time = time.time()
     current_solution = initial_solution
     current_fitness = fitness_function(current_solution)
 
-    for iteration in range(max_iterations):
-        # Generate a neighboring solution
-        neighbor_solution = generate_neighbor(current_solution)
-        neighbor_fitness = fitness_function(neighbor_solution)
+    # Initialize the report data
+    report_data['hill_climbing'] = {'iterations':[0], 'solutions':[[a for a, _ in current_solution]], 'fitness_scores': [current_fitness], 'time':[0]}
+
+    for iteration in range(1, max_iterations+1):
+        # Generate multiple neighboring solutions
+        neighbors = [generate_neighbor(current_solution) for _ in range(num_neighbors)]
+
+        # Evaluate fitness for each neighbor
+        neighbor_fitnesses = [fitness_function(neighbor) for neighbor in neighbors]
+
+        # Select the best neighbor
+        best_neighbor_index = min(range(len(neighbor_fitnesses)), key=neighbor_fitnesses.__getitem__)
+        neighbor_fitness = neighbor_fitnesses[best_neighbor_index]
 
         # If the neighbor has better fitness, move to that solution
         if neighbor_fitness < current_fitness:
-            current_solution = neighbor_solution
+            current_solution = neighbors[best_neighbor_index]
             current_fitness = neighbor_fitness
 
-        # Print current best fitness score at each iteration
-        print(f"Iteration {iteration + 1}: Best Fitness Score: {current_fitness}")
+        report_data['hill_climbing']['iterations'].append(iteration)
+        report_data['hill_climbing']['solutions'].append([a for a, _ in current_solution])
+        report_data['hill_climbing']['fitness_scores'].append(current_fitness)
+        report_data['hill_climbing']['time'].append(time.time()-start_time)
 
+    print("Best Solution:", [a for a, _ in current_solution])
     print("Best Fitness Score:", current_fitness)
+    print("Time taken:", time.time()-start_time)
     return current_solution, current_fitness
 
 # Call the menu function to start
