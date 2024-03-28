@@ -4,18 +4,18 @@ import math
 import time
 
 class Airplane:
-    def __init__(self):
+    def __init__(self, min_fuel_level, max_fuel_level, min_fuel_comsumption_rate, max_fuel_consumption_rate, min_expected_landing_time, max_expected_landing_time):
         # Randomly generate fuel level between 1000 and 5000 liters
-        self.arriving_fuel_level = random.uniform(1000, 5000)
+        self.arriving_fuel_level = random.uniform(min_fuel_level, max_fuel_level)
         # Randomly generate fuel consumption rate between 5 and 20 liters per minute
-        self.fuel_consumption_rate = random.uniform(5, 20)
+        self.fuel_consumption_rate = random.uniform(min_fuel_comsumption_rate, max_fuel_consumption_rate)
         # Randomly generate expected landing time between 10 and 120 minutes from now
-        self.expected_landing_time = random.uniform(10, 120)
+        self.expected_landing_time = random.uniform(min_expected_landing_time, max_expected_landing_time)   
 
 report_data = {'genetic': {}, 'simulated_annealing': {'iterations':[], 'solutions':[], 'fitness_scores': [], 'time':[], 'temperatures': []}, 'hill_climbing': {'iterations':[], 'solutions':[], 'fitness_scores': [], 'time':[]},'first_airplane_stream': {}}
 
-def generate_airplane_stream(num_airplanes):
-    airplane_stream = [(index, Airplane()) for index in range(num_airplanes)]
+def generate_airplane_stream(num_airplanes, min_fuel_level, max_fuel_level, min_fuel_comsumption_rate, max_fuel_consumption_rate, min_expected_landing_time, max_expected_landing_time):
+    airplane_stream = [(index, Airplane(min_fuel_level, max_fuel_level, min_fuel_comsumption_rate, max_fuel_consumption_rate, min_expected_landing_time, max_expected_landing_time)) for index in range(num_airplanes)]
     for index, airplane in airplane_stream:
         report_data['first_airplane_stream']['index'] = [index for index, _ in airplane_stream]
         report_data['first_airplane_stream']['arriving_fuel_level'] = [airplane.arriving_fuel_level for _, airplane in airplane_stream]
@@ -23,6 +23,7 @@ def generate_airplane_stream(num_airplanes):
         report_data['first_airplane_stream']['expected_landing_time'] = [airplane.expected_landing_time for _, airplane in airplane_stream]
 
     return airplane_stream
+
 
 def generate_single_solution(airplane_stream):
     shuffled_airplane_stream = airplane_stream.copy()
@@ -293,6 +294,40 @@ def generate_report(report_data):
     print("Report generated and saved to", file_path)
 
 def menu():
+
+    print("====================================")
+    print("\tAirplane Parameters")
+    print("====================================")
+
+    print("Would you like to use the default settings or customize them yourself?")
+    print("1. Default Settings")
+    print("2. Customize Airplane settings")
+    somechoice = input()
+
+    if somechoice == "1":
+
+        min_fuel_level = 1000
+        max_fuel_level = 5000
+        min_fuel_consumption_rate = 5
+        max_fuel_consumption_rate = 20
+        min_expected_landing_time = 10
+        max_expected_landing_time = 120
+        number_of_airplanes = 50
+
+    elif somechoice == "2":
+
+        min_fuel_level = float(input("Enter the minimum fuel level (liters): "))
+        max_fuel_level = float(input("Enter the maximum fuel level (liters): "))
+        min_fuel_consumption_rate = float(input("Enter the minimum fuel consumption rate (liters per minute): "))
+        max_fuel_consumption_rate = float(input("Enter the maximum fuel consumption rate (liters per minute): "))
+        min_expected_landing_time = float(input("Enter the minimum expected landing time (minutes from now): "))
+        max_expected_landing_time = float(input("Enter the maximum expected landing time (minutes from now, maximum is 24 hours): "))
+        number_of_airplanes = int(input("Enter the number of airplanes: "))
+    
+    else:
+        print("Invalid choice. Please enter 1 or 2.")
+        menu()
+
     print("Choose an algorithm:")
     print("1. Genetic Algorithm")
     print("2. Simulated Annealing")
@@ -300,7 +335,7 @@ def menu():
     print("4. Full Report")
 
     choice = input("Enter your choice (1 or 2 or 3 or 4): ")
-    airplane_stream = generate_airplane_stream(200)
+    airplane_stream = generate_airplane_stream(number_of_airplanes, min_fuel_level, max_fuel_level, min_fuel_consumption_rate, max_fuel_consumption_rate, min_expected_landing_time, max_expected_landing_time)
 
     if choice == "1":
         number_of_generations, mutation_rate = ask_genetic_algorithm_parameters()
@@ -324,7 +359,7 @@ def menu():
         run_hill_climbing(airplane_stream, max_iterations, num_neighbors)
         generate_report(report_data)
     else:
-        print("Invalid choice. Please enter 1 or 2.")
+        print("Invalid choice. Please enter a valid number")
         menu()
 
 def ask_genetic_algorithm_parameters():
